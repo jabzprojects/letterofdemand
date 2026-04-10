@@ -117,7 +117,7 @@ function Opts({ value, onPick, options }: {
   return (
     <div style={{ marginBottom: 4 }}>
       {options.map(o => (
-        <button key={o.v} style={{ ...S.optBtn, ...(value === o.v ? S.optBtnSel : {}) }} onClick={() => onPick(o.v)}>
+        <button key={o.v} className="btn-opt" style={{ ...S.optBtn, ...(value === o.v ? S.optBtnSel : {}) }} onClick={() => onPick(o.v)}>
           <span style={{ ...S.dot, ...(value === o.v ? S.dotSel : {}) }} />
           {o.l}
         </button>
@@ -133,8 +133,8 @@ function YN({ value, onChange, yl, nl, label }: {
     <div>
       {label && <label style={S.lbl}>{label}</label>}
       <div style={S.yn}>
-        <button style={{ ...S.ynBtn, ...(value === 'yes' ? S.ynBtnSel : {}) }} onClick={() => onChange('yes')}>{yl}</button>
-        <button style={{ ...S.ynBtn, ...(value === 'no' ? S.ynBtnSel : {}) }} onClick={() => onChange('no')}>{nl}</button>
+        <button className="btn-secondary" style={{ ...S.ynBtn, ...(value === 'yes' ? S.ynBtnSel : {}) }} onClick={() => onChange('yes')}>{yl}</button>
+        <button className="btn-secondary" style={{ ...S.ynBtn, ...(value === 'no' ? S.ynBtnSel : {}) }} onClick={() => onChange('no')}>{nl}</button>
       </div>
     </div>
   )
@@ -146,12 +146,12 @@ function Nav({ step, total, onBack, onNext, onHome, hideBack }: {
   return (
     <div style={S.navRow}>
       <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-        {!hideBack && <button style={S.backBtn} onClick={onBack}>Back</button>}
-        <button style={S.homeBtn} onClick={onHome}>Home</button>
+        {!hideBack && <button className="btn-secondary" style={S.backBtn} onClick={onBack}>Back</button>}
+        <button className="btn-secondary" style={S.homeBtn} onClick={onHome}>Home</button>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
         <span style={S.sc}>{step + 1} of {total}</span>
-        <button style={S.nextBtn} onClick={onNext}>
+        <button className="btn-primary" style={S.nextBtn} onClick={onNext}>
           {step === total ? 'Review answers' : 'Continue'}
         </button>
       </div>
@@ -450,11 +450,11 @@ export default function App() {
           <p style={S.phase}>Get started</p>
           <p style={S.q}>How would you like to proceed?</p>
           <p style={S.hint}>Choose the option that suits you best.</p>
-          <button style={S.choiceBtn} onClick={() => { setStep(0); setScreen('questions') }}>
+          <button className="btn-secondary" style={S.choiceBtn} onClick={() => { setStep(0); setScreen('questions') }}>
             <div style={S.choiceTitle}>Answer questions</div>
             <div style={S.choiceDesc}>We walk you through a series of questions one at a time and generate the letter at the end. Best for most people.</div>
           </button>
-          <button style={S.choiceBtn} onClick={() => setScreen('upload')}>
+          <button className="btn-secondary" style={S.choiceBtn} onClick={() => setScreen('upload')}>
             <div style={S.choiceTitle}>Upload a completed template</div>
             <div style={S.choiceDesc}>Download our template, fill it in and upload it. Best for bulk use or if you prefer to prepare your information in advance.</div>
           </button>
@@ -508,7 +508,7 @@ export default function App() {
             <button style={{ ...S.nextBtn, width: '100%', padding: 13, marginBottom: 12 }} onClick={generateFromFile}>Generate letter</button>
           )}
           <div style={S.navRow}>
-            <button style={S.backBtn} onClick={() => setScreen('choose')}>Back</button>
+            <button className="btn-secondary" style={S.backBtn} onClick={() => setScreen('choose')}>Back</button>
             <span />
           </div>
         </div>
@@ -545,12 +545,12 @@ export default function App() {
               <div key={item.key} style={S.reviewRow}>
                 <span style={S.reviewLabel}>{item.label}</span>
                 <span style={S.reviewValue}>{data[item.key] || <span style={{ color: '#bbb', fontStyle: 'italic' }}>not answered</span>}</span>
-                <button style={S.reviewEditBtn} onClick={() => goToStep(item.goToStep)}>Edit</button>
+                <button className="btn-secondary" style={S.reviewEditBtn} onClick={() => goToStep(item.goToStep)}>Edit</button>
               </div>
             ))}
           </div>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' as const, marginBottom: 8 }}>
-            <button style={S.nextBtn} onClick={generate}>Generate letter</button>
+            <button className="btn-primary" style={S.nextBtn} onClick={generate}>Generate letter</button>
             <button
               style={{ ...S.copyBtn, fontSize: 14 }}
               onClick={() => { downloadTemplate(data); setDlConfirm(true); setTimeout(() => setDlConfirm(false), 3000) }}
@@ -560,8 +560,8 @@ export default function App() {
           </div>
           {dlConfirm && <p style={{ fontSize: 13, color: '#666', marginTop: 6 }}>Downloaded. You can upload this file next time to skip the questions.</p>}
           <div style={{ ...S.navRow, marginTop: 12 }}>
-            <button style={S.backBtn} onClick={() => goToStep(TOTAL_STEPS)}>Back</button>
-            <button style={S.homeBtn} onClick={goHome}>Home</button>
+            <button className="btn-secondary" style={S.backBtn} onClick={() => goToStep(TOTAL_STEPS)}>Back</button>
+            <button className="btn-secondary" style={S.homeBtn} onClick={goHome}>Home</button>
           </div>
         </div>
       </div>
@@ -578,7 +578,7 @@ export default function App() {
               <p style={S.phase}>Error</p>
               <p style={S.q}>Something went wrong</p>
               <p style={{ fontSize: 14, color: '#c00', marginBottom: 24 }}>{error}</p>
-              <button style={S.nextBtn} onClick={restart}>Start over</button>
+              <button className="btn-primary" style={S.nextBtn} onClick={restart}>Start over</button>
             </div>
           ) : (
             <div>
@@ -587,11 +587,11 @@ export default function App() {
               <p style={S.hint}>Review the letter carefully. Any section marked with double square brackets needs your attention before sending.</p>
               <pre style={S.letterBox}>{letter}</pre>
               <div style={{ display: 'flex', gap: 10, marginTop: '1rem', alignItems: 'center', flexWrap: 'wrap' as const }}>
-                <button style={S.copyBtn} onClick={async () => { await navigator.clipboard.writeText(letter); setCopied(true); setTimeout(() => setCopied(false), 2500) }}>
+                <button className="btn-secondary" style={S.copyBtn} onClick={async () => { await navigator.clipboard.writeText(letter); setCopied(true); setTimeout(() => setCopied(false), 2500) }}>
                   {copied ? 'Copied!' : 'Copy letter text'}
                 </button>
-                <button style={S.copyBtn} onClick={() => { setScreen('review') }}>Back to answers</button>
-                <button style={S.restartBtn} onClick={restart}>Start over</button>
+                <button className="btn-secondary" style={S.copyBtn} onClick={() => { setScreen('review') }}>Back to answers</button>
+                <button className="btn-secondary" style={S.restartBtn} onClick={restart}>Start over</button>
               </div>
             </div>
           )}
