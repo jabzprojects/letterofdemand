@@ -63,7 +63,7 @@ const S: Record<string, React.CSSProperties> = {
   ynBtn: { flex: 1, background: '#fff', border: '0.5px solid rgba(0,0,0,0.18)', borderRadius: 8, padding: 11, textAlign: 'center' as const, fontSize: 14, color: '#111' },
   ynBtnSel: { border: '1.5px solid #111', background: '#f6f6f4', fontWeight: 500 },
   navRow: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 20, paddingTop: 20, borderTop: '0.5px solid rgba(0,0,0,0.08)' },
-  backBtn: { background: 'none', border: 'none', fontSize: 14, color: '#666', padding: 0 },
+  backBtn: { background: 'none', border: '0.5px solid rgba(0,0,0,0.2)', borderRadius: 8, padding: '8px 14px', fontSize: 14, color: '#666' },
   nextBtn: { background: '#111', color: '#fff', border: 'none', borderRadius: 8, padding: '11px 22px', fontSize: 14, fontWeight: 500 },
   homeBtn: { background: 'none', border: '0.5px solid rgba(0,0,0,0.2)', borderRadius: 8, padding: '8px 14px', fontSize: 13, color: '#666' },
   sc: { fontSize: 13, color: '#999' },
@@ -71,7 +71,7 @@ const S: Record<string, React.CSSProperties> = {
   sumCard: { background: '#f6f6f4', borderRadius: 8, padding: '1rem', marginBottom: '1rem', fontSize: 13 },
   sumRow: { display: 'flex', justifyContent: 'space-between', padding: '3px 0', gap: 12 },
   copyBtn: { background: '#f6f6f4', border: '0.5px solid rgba(0,0,0,0.15)', borderRadius: 8, padding: '10px 18px', fontSize: 13, color: '#111' },
-  restartBtn: { background: 'none', border: 'none', fontSize: 13, color: '#666', padding: '10px 0' },
+  restartBtn: { background: 'none', border: '0.5px solid rgba(0,0,0,0.2)', borderRadius: 8, padding: '10px 18px', fontSize: 13, color: '#666' },
   centered: { display: 'flex', flexDirection: 'column' as const, alignItems: 'center', justifyContent: 'center', padding: '3rem 0', gap: 16 },
   spinner: { width: 32, height: 32, border: '2px solid rgba(0,0,0,0.1)', borderTopColor: '#111', borderRadius: '50%', animation: 'spin 0.8s linear infinite' },
   overlay: { position: 'fixed' as const, inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', zIndex: 100 },
@@ -146,7 +146,7 @@ function Nav({ step, total, onBack, onNext, onHome, hideBack }: {
   return (
     <div style={S.navRow}>
       <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-        <button style={{ ...S.backBtn, visibility: hideBack ? 'hidden' : 'visible' }} onClick={onBack}>Back</button>
+        {!hideBack && <button style={S.backBtn} onClick={onBack}>Back</button>}
         <button style={S.homeBtn} onClick={onHome}>Home</button>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
@@ -274,6 +274,7 @@ export default function App() {
   const [uploadedFile, setUploadedFile] = useState('')
   const [uploadFileName, setUploadFileName] = useState('')
   const [dlConfirm, setDlConfirm] = useState(false)
+  const [dragOver, setDragOver] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
   function set(key: keyof FormData, val: string) {
@@ -343,10 +344,22 @@ export default function App() {
   function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
+    readFile(file)
+  }
+
+  function readFile(file: File) {
+    if (!file.name.endsWith('.txt')) return
     setUploadFileName(file.name)
     const reader = new FileReader()
     reader.onload = ev => setUploadedFile(ev.target?.result as string)
     reader.readAsText(file)
+  }
+
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault()
+    setDragOver(false)
+    const file = e.dataTransfer.files?.[0]
+    if (file) readFile(file)
   }
 
   function pickOption(key: keyof FormData, val: string) {
@@ -381,6 +394,7 @@ export default function App() {
     setUploadedFile('')
     setUploadFileName('')
     setDlConfirm(false)
+    setDragOver(false)
     setScreen('landing')
   }
 
@@ -451,6 +465,15 @@ export default function App() {
 
   // UPLOAD PATH
   if (screen === 'upload') {
+    const dropAreaStyle: React.CSSProperties = {
+      border: dragOver ? '2px solid #111' : '1.5px dashed rgba(0,0,0,0.2)',
+      borderRadius: 12,
+      padding: '2rem',
+      textAlign: 'center',
+      marginBottom: 16,
+      background: dragOver ? '#f0f0ee' : '#fff',
+      transition: 'all 0.15s',
+    }
     return (
       <div style={S.page}>
         <div style={S.card}>
@@ -460,22 +483,29 @@ export default function App() {
           <a href="/api/template" style={{ display: 'inline-block', textDecoration: 'none', marginBottom: 24, fontSize: 14, padding: '10px 18px', background: '#f6f6f4', color: '#111', border: '0.5px solid rgba(0,0,0,0.2)', borderRadius: 8 }}>
             Download template
           </a>
-          <div style={S.uploadArea}>
+          <div
+            style={dropAreaStyle}
+            onDragOver={e => { e.preventDefault(); setDragOver(true) }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={handleDrop}
+          >
             {uploadFileName ? (
               <div>
                 <p style={{ fontSize: 14, color: '#111', fontWeight: 500, marginBottom: 4 }}>{uploadFileName}</p>
-                <p style={{ fontSize: 13, color: '#666' }}>File ready. Click generate when you are ready to proceed.</p>
+                <p style={{ fontSize: 13, color: '#666', marginBottom: 12 }}>File ready. Click generate when you are ready to proceed.</p>
+                <button style={{ ...S.restartBtn, border: 'none', padding: 0, fontSize: 13 }} onClick={() => { setUploadedFile(''); setUploadFileName('') }}>Remove file</button>
               </div>
             ) : (
               <div>
-                <p style={{ fontSize: 14, color: '#666', marginBottom: 12 }}>Click to select your completed template file</p>
-                <button style={{ ...S.nextBtn, fontSize: 14 }} onClick={() => fileRef.current?.click()}>Select file</button>
+                <p style={{ fontSize: 14, color: '#666', marginBottom: 4 }}>Drag and drop your completed template here</p>
+                <p style={{ fontSize: 13, color: '#999', marginBottom: 12 }}>or</p>
+                <button style={{ ...S.copyBtn, fontSize: 14 }} onClick={() => fileRef.current?.click()}>Select file</button>
               </div>
             )}
             <input ref={fileRef} type="file" accept=".txt" style={S.fileInput} onChange={handleFileUpload} />
           </div>
           {uploadFileName && (
-            <button style={{ ...S.nextBtn, width: '100%', padding: 13 }} onClick={generateFromFile}>Generate letter</button>
+            <button style={{ ...S.nextBtn, width: '100%', padding: 13, marginBottom: 12 }} onClick={generateFromFile}>Generate letter</button>
           )}
           <div style={S.navRow}>
             <button style={S.backBtn} onClick={() => setScreen('choose')}>Back</button>
