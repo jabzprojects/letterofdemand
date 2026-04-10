@@ -2,7 +2,7 @@
 
 import { useState, useRef } from 'react'
 
-type Screen = 'landing' | 'disclaimer' | 'choose' | 'questions' | 'upload' | 'generating' | 'output'
+type Screen = 'landing' | 'disclaimer' | 'choose' | 'questions' | 'review' | 'upload' | 'generating' | 'output'
 
 interface FormData {
   senderName: string
@@ -65,6 +65,7 @@ const S: Record<string, React.CSSProperties> = {
   navRow: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 20, paddingTop: 20, borderTop: '0.5px solid rgba(0,0,0,0.08)' },
   backBtn: { background: 'none', border: 'none', fontSize: 14, color: '#666', padding: 0 },
   nextBtn: { background: '#111', color: '#fff', border: 'none', borderRadius: 8, padding: '11px 22px', fontSize: 14, fontWeight: 500 },
+  homeBtn: { background: 'none', border: '0.5px solid rgba(0,0,0,0.2)', borderRadius: 8, padding: '8px 14px', fontSize: 13, color: '#666' },
   sc: { fontSize: 13, color: '#999' },
   letterBox: { background: '#fff', border: '0.5px solid rgba(0,0,0,0.12)', borderRadius: 12, padding: '2rem', fontSize: 14, lineHeight: 2, color: '#111', whiteSpace: 'pre-wrap' as const, fontFamily: 'Georgia, serif', marginTop: '1rem', overflowX: 'auto' as const },
   sumCard: { background: '#f6f6f4', borderRadius: 8, padding: '1rem', marginBottom: '1rem', fontSize: 13 },
@@ -80,9 +81,13 @@ const S: Record<string, React.CSSProperties> = {
   choiceDesc: { fontSize: 13, color: '#666', lineHeight: 1.5 },
   uploadArea: { border: '1.5px dashed rgba(0,0,0,0.2)', borderRadius: 12, padding: '2rem', textAlign: 'center' as const, marginBottom: 16 },
   fileInput: { display: 'none' },
+  reviewRow: { display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', padding: '12px 0', borderBottom: '0.5px solid rgba(0,0,0,0.06)', gap: 12 },
+  reviewLabel: { fontSize: 13, color: '#999', minWidth: 140, paddingTop: 1 },
+  reviewValue: { fontSize: 14, color: '#111', flex: 1, lineHeight: 1.5, whiteSpace: 'pre-wrap' as const },
+  reviewEditBtn: { background: 'none', border: 'none', fontSize: 13, color: '#0066cc', padding: '0 0 0 8px', flexShrink: 0, cursor: 'pointer' },
 }
 
-// ALL SUB-COMPONENTS ARE DEFINED HERE OUTSIDE App() TO PREVENT REMOUNTING ON EVERY KEYSTROKE
+// SUB-COMPONENTS DEFINED OUTSIDE App() TO PREVENT INPUT FOCUS LOSS
 
 function Field({ value, onChange, label, ph, type }: {
   value: string; onChange: (v: string) => void; label?: string; ph?: string; type?: string
@@ -135,21 +140,127 @@ function YN({ value, onChange, yl, nl, label }: {
   )
 }
 
-function Nav({ step, total, onBack, onNext, hideBack }: {
-  step: number; total: number; onBack: () => void; onNext: () => void; hideBack?: boolean
+function Nav({ step, total, onBack, onNext, onHome, hideBack }: {
+  step: number; total: number; onBack: () => void; onNext: () => void; onHome: () => void; hideBack?: boolean
 }) {
   return (
     <div style={S.navRow}>
-      <button style={{ ...S.backBtn, visibility: hideBack ? 'hidden' : 'visible' }} onClick={onBack}>Back</button>
+      <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+        <button style={{ ...S.backBtn, visibility: hideBack ? 'hidden' : 'visible' }} onClick={onBack}>Back</button>
+        <button style={S.homeBtn} onClick={onHome}>Home</button>
+      </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
         <span style={S.sc}>{step + 1} of {total}</span>
         <button style={S.nextBtn} onClick={onNext}>
-          {step === total ? 'Generate letter' : 'Continue'}
+          {step === total ? 'Review answers' : 'Continue'}
         </button>
       </div>
     </div>
   )
 }
+
+// TEMPLATE BUILDER — assembles a completed txt file from form data
+
+function buildTemplateText(d: FormData): string {
+  const line = (label: string, value: string) => label + '\n' + (value || '(not answered)') + '\n\n'
+  return 'LETTER OF DEMAND - COMPLETED TEMPLATE\n' +
+    'Generated ' + new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' }) + '\n\n' +
+    '========================================\n' +
+    'YOUR DETAILS\n' +
+    '========================================\n\n' +
+    line('Full name:', d.senderName) +
+    line('Street address:', d.senderAddress) +
+    line('Email:', d.senderEmail) +
+    line('Phone:', d.senderPhone) +
+    '========================================\n' +
+    'THEIR DETAILS\n' +
+    '========================================\n\n' +
+    line('Full name or business name:', d.recipientName) +
+    line('Their address or email:', d.recipientAddress) +
+    line('Are they an individual or a business:', d.recipientType) +
+    '========================================\n' +
+    'THE DISPUTE\n' +
+    '========================================\n\n' +
+    line('What is this dispute about:', d.disputeType) +
+    line('When did the agreement or relationship begin:', d.startDate) +
+    '========================================\n' +
+    'WHAT HAPPENED\n' +
+    '========================================\n\n' +
+    line('What was agreed between you:', d.agreement) +
+    line('What went wrong:', d.whatWentWrong) +
+    line('Have you already contacted them:', d.priorContact) +
+    line('What happened when you raised it:', d.priorContactDetail) +
+    '========================================\n' +
+    'WHAT YOU WANT\n' +
+    '========================================\n\n' +
+    line('Are you seeking money, action or both:', d.demandType) +
+    line('Total amount claimed ($):', d.amountClaimed) +
+    line('How is this amount made up:', d.amountBreakdown) +
+    line('What specifically do you want them to do:', d.actionDemand) +
+    line('Do you have supporting documents:', d.hasEvidence) +
+    '========================================\n' +
+    'THE DEADLINE\n' +
+    '========================================\n\n' +
+    line('How many days are you giving them:', d.deadline) +
+    line('If ignored what will you do:', d.consequence) +
+    '========================================\n' +
+    'PAYMENT DETAILS\n' +
+    '========================================\n\n' +
+    line('Bank name:', d.bankName) +
+    line('BSB:', d.bsb) +
+    line('Account number:', d.accountNumber) +
+    line('Account name:', d.accountName) +
+    '========================================\n' +
+    'END OF TEMPLATE\n' +
+    '========================================\n'
+}
+
+function downloadTemplate(d: FormData) {
+  const text = buildTemplateText(d)
+  const blob = new Blob([text], { type: 'text/plain' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = 'letter-of-demand-answers.txt'
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
+// REVIEW SCREEN ROWS CONFIG
+
+interface ReviewItem {
+  label: string
+  key: keyof FormData
+  goToStep: number
+  showIf?: (d: FormData) => boolean
+}
+
+const REVIEW_ITEMS: ReviewItem[] = [
+  { label: 'Your name', key: 'senderName', goToStep: 0 },
+  { label: 'Your address', key: 'senderAddress', goToStep: 1 },
+  { label: 'Your email', key: 'senderEmail', goToStep: 1 },
+  { label: 'Your phone', key: 'senderPhone', goToStep: 1 },
+  { label: 'Recipient name', key: 'recipientName', goToStep: 2 },
+  { label: 'Recipient address', key: 'recipientAddress', goToStep: 2 },
+  { label: 'Recipient type', key: 'recipientType', goToStep: 3 },
+  { label: 'Dispute type', key: 'disputeType', goToStep: 4 },
+  { label: 'Agreement began', key: 'startDate', goToStep: 5 },
+  { label: 'What was agreed', key: 'agreement', goToStep: 6 },
+  { label: 'What went wrong', key: 'whatWentWrong', goToStep: 7 },
+  { label: 'Prior contact', key: 'priorContact', goToStep: 8 },
+  { label: 'Prior contact detail', key: 'priorContactDetail', goToStep: 8, showIf: d => d.priorContact === 'yes' },
+  { label: 'Seeking', key: 'demandType', goToStep: 9 },
+  { label: 'Amount claimed', key: 'amountClaimed', goToStep: 10, showIf: d => d.demandType === 'money' || d.demandType === 'both' },
+  { label: 'Amount breakdown', key: 'amountBreakdown', goToStep: 10, showIf: d => d.demandType === 'money' || d.demandType === 'both' },
+  { label: 'Action required', key: 'actionDemand', goToStep: 10, showIf: d => d.demandType === 'action' || d.demandType === 'both' },
+  { label: 'Has evidence', key: 'hasEvidence', goToStep: 10 },
+  { label: 'Deadline (days)', key: 'deadline', goToStep: 11 },
+  { label: 'If ignored', key: 'consequence', goToStep: 12 },
+  { label: 'Bank name', key: 'bankName', goToStep: 13, showIf: d => d.demandType === 'money' || d.demandType === 'both' },
+  { label: 'BSB', key: 'bsb', goToStep: 13, showIf: d => d.demandType === 'money' || d.demandType === 'both' },
+  { label: 'Account number', key: 'accountNumber', goToStep: 13, showIf: d => d.demandType === 'money' || d.demandType === 'both' },
+  { label: 'Account name', key: 'accountName', goToStep: 13, showIf: d => d.demandType === 'money' || d.demandType === 'both' },
+]
 
 // MAIN APP
 
@@ -162,6 +273,7 @@ export default function App() {
   const [copied, setCopied] = useState(false)
   const [uploadedFile, setUploadedFile] = useState('')
   const [uploadFileName, setUploadFileName] = useState('')
+  const [dlConfirm, setDlConfirm] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
   function set(key: keyof FormData, val: string) {
@@ -189,19 +301,18 @@ export default function App() {
     return s + '\n\n' + today() + '\n\n' + r + '\n\n'
   }
 
-  async function generate(payload: Record<string, string>, fromFile: boolean) {
+  async function generate() {
     setScreen('generating')
     setError('')
     try {
       const res = await fetch('/api/generate-letter', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...payload, fromFile }),
+        body: JSON.stringify({ ...data, fromFile: false }),
       })
       const json = await res.json()
       if (json.error) { setError(json.error); setScreen('output'); return }
-      const header = fromFile ? '' : buildHeader()
-      setLetter(header + json.letter)
+      setLetter(buildHeader() + json.letter)
       setScreen('output')
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Something went wrong')
@@ -209,13 +320,24 @@ export default function App() {
     }
   }
 
-  function generateFromQuestions() {
-    generate(data as unknown as Record<string, string>, false)
-  }
-
-  function generateFromFile() {
+  async function generateFromFile() {
     if (!uploadedFile) return
-    generate({ rawFile: uploadedFile } as Record<string, string>, true)
+    setScreen('generating')
+    setError('')
+    try {
+      const res = await fetch('/api/generate-letter', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rawFile: uploadedFile, fromFile: true }),
+      })
+      const json = await res.json()
+      if (json.error) { setError(json.error); setScreen('output'); return }
+      setLetter(json.letter)
+      setScreen('output')
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Something went wrong')
+      setScreen('output')
+    }
   }
 
   function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -239,7 +361,16 @@ export default function App() {
 
   function goNext() {
     if (step < TOTAL_STEPS) setStep(s => s + 1)
-    else generateFromQuestions()
+    else setScreen('review')
+  }
+
+  function goHome() {
+    setScreen('choose')
+  }
+
+  function goToStep(n: number) {
+    setStep(n)
+    setScreen('questions')
   }
 
   function restart() {
@@ -249,14 +380,15 @@ export default function App() {
     setError('')
     setUploadedFile('')
     setUploadFileName('')
+    setDlConfirm(false)
     setScreen('landing')
   }
 
+  // LANDING
   if (screen === 'landing') {
     return (
       <div style={S.page}>
         <div style={{ ...S.card, padding: '3rem 2rem' }}>
-          <p style={{ fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#999', marginBottom: 12 }}>Free tool</p>
           <h1 style={{ fontSize: 28, fontWeight: 600, color: '#111', lineHeight: 1.3, marginBottom: 16 }}>Letter of Demand</h1>
           <p style={{ fontSize: 16, color: '#444', lineHeight: 1.7, marginBottom: 12 }}>
             This tool helps you prepare a formal letter of demand to send to someone who owes you money, has failed to deliver on an agreement or has caused you loss.
@@ -264,10 +396,6 @@ export default function App() {
           <p style={{ fontSize: 16, color: '#444', lineHeight: 1.7, marginBottom: 32 }}>
             Answer a series of questions or upload a completed template and the tool will generate a firm professional letter ready to send.
           </p>
-          <div style={{ background: '#f6f6f4', borderRadius: 10, padding: '1rem 1.25rem', marginBottom: 32, fontSize: 14, color: '#555', lineHeight: 1.6 }}>
-            <strong style={{ color: '#111', display: 'block', marginBottom: 6 }}>Before you begin</strong>
-            This tool uses AI to generate your letter. While it is designed to produce accurate and appropriate output it may make mistakes. All output should be reviewed carefully before sending. This tool does not provide legal advice and no liability is accepted for any letter generated.
-          </div>
           <button style={{ ...S.nextBtn, padding: '14px 32px', fontSize: 15 }} onClick={() => setScreen('disclaimer')}>
             Get started
           </button>
@@ -277,6 +405,7 @@ export default function App() {
     )
   }
 
+  // DISCLAIMER
   if (screen === 'disclaimer') {
     return (
       <div style={S.overlay}>
@@ -299,6 +428,7 @@ export default function App() {
     )
   }
 
+  // CHOOSE PATH
   if (screen === 'choose') {
     return (
       <div style={S.page}>
@@ -306,7 +436,7 @@ export default function App() {
           <p style={S.phase}>Get started</p>
           <p style={S.q}>How would you like to proceed?</p>
           <p style={S.hint}>Choose the option that suits you best.</p>
-          <button style={S.choiceBtn} onClick={() => setScreen('questions')}>
+          <button style={S.choiceBtn} onClick={() => { setStep(0); setScreen('questions') }}>
             <div style={S.choiceTitle}>Answer questions</div>
             <div style={S.choiceDesc}>We walk you through a series of questions one at a time and generate the letter at the end. Best for most people.</div>
           </button>
@@ -319,6 +449,7 @@ export default function App() {
     )
   }
 
+  // UPLOAD PATH
   if (screen === 'upload') {
     return (
       <div style={S.page}>
@@ -355,6 +486,7 @@ export default function App() {
     )
   }
 
+  // GENERATING
   if (screen === 'generating') {
     return (
       <div style={S.page}>
@@ -369,6 +501,44 @@ export default function App() {
     )
   }
 
+  // REVIEW SCREEN
+  if (screen === 'review') {
+    const visibleItems = REVIEW_ITEMS.filter(item => !item.showIf || item.showIf(data))
+    return (
+      <div style={S.page}>
+        <div style={S.card}>
+          <p style={S.phase}>Review your answers</p>
+          <p style={S.q}>Check everything before generating</p>
+          <p style={S.hint}>Click any answer to go back and change it. Once you are happy with everything click Generate letter.</p>
+          <div style={{ marginBottom: 24 }}>
+            {visibleItems.map(item => (
+              <div key={item.key} style={S.reviewRow}>
+                <span style={S.reviewLabel}>{item.label}</span>
+                <span style={S.reviewValue}>{data[item.key] || <span style={{ color: '#bbb', fontStyle: 'italic' }}>not answered</span>}</span>
+                <button style={S.reviewEditBtn} onClick={() => goToStep(item.goToStep)}>Edit</button>
+              </div>
+            ))}
+          </div>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' as const, marginBottom: 8 }}>
+            <button style={S.nextBtn} onClick={generate}>Generate letter</button>
+            <button
+              style={{ ...S.copyBtn, fontSize: 14 }}
+              onClick={() => { downloadTemplate(data); setDlConfirm(true); setTimeout(() => setDlConfirm(false), 3000) }}
+            >
+              Download answers as template
+            </button>
+          </div>
+          {dlConfirm && <p style={{ fontSize: 13, color: '#666', marginTop: 6 }}>Downloaded. You can upload this file next time to skip the questions.</p>}
+          <div style={{ ...S.navRow, marginTop: 12 }}>
+            <button style={S.backBtn} onClick={() => goToStep(TOTAL_STEPS)}>Back</button>
+            <button style={S.homeBtn} onClick={goHome}>Home</button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // OUTPUT
   if (screen === 'output') {
     return (
       <div style={S.page}>
@@ -385,27 +555,12 @@ export default function App() {
               <p style={S.phase}>Your letter</p>
               <p style={S.q}>Ready to review</p>
               <p style={S.hint}>Review the letter carefully. Any section marked with double square brackets needs your attention before sending.</p>
-              {data.senderName && (
-                <div style={S.sumCard}>
-                  {([
-                    ['Sender', data.senderName],
-                    ['Recipient', data.recipientName],
-                    ['Dispute', data.disputeType],
-                    ['Deadline', data.deadline + ' days, by ' + deadlineDate()],
-                    ...(data.amountClaimed ? [['Amount claimed', '$' + parseFloat(data.amountClaimed).toLocaleString('en-AU', { minimumFractionDigits: 2 })]] : []),
-                  ] as [string, string][]).filter(r => r[1]).map(([k, v]) => (
-                    <div key={k} style={S.sumRow}>
-                      <span style={{ color: '#666' }}>{k}</span>
-                      <span style={{ color: '#111', fontWeight: 500, textAlign: 'right', flex: 1 }}>{v}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
               <pre style={S.letterBox}>{letter}</pre>
-              <div style={{ display: 'flex', gap: 10, marginTop: '1rem', alignItems: 'center' }}>
+              <div style={{ display: 'flex', gap: 10, marginTop: '1rem', alignItems: 'center', flexWrap: 'wrap' as const }}>
                 <button style={S.copyBtn} onClick={async () => { await navigator.clipboard.writeText(letter); setCopied(true); setTimeout(() => setCopied(false), 2500) }}>
                   {copied ? 'Copied!' : 'Copy letter text'}
                 </button>
+                <button style={S.copyBtn} onClick={() => { setScreen('review') }}>Back to answers</button>
                 <button style={S.restartBtn} onClick={restart}>Start over</button>
               </div>
             </div>
@@ -423,7 +578,7 @@ export default function App() {
     <div key={0}>
       <p style={S.phase}>About you</p><p style={S.q}>What is your full name?</p><p style={S.hint}>This appears as the sender on the letter.</p>
       <Field value={data.senderName} onChange={v => set('senderName', v)} label="Full name" ph="e.g. Sarah Johnson" />
-      <Nav step={step} total={TOTAL_STEPS} onBack={goBack} onNext={goNext} hideBack />
+      <Nav step={step} total={TOTAL_STEPS} onBack={goBack} onNext={goNext} onHome={goHome} hideBack />
     </div>,
     <div key={1}>
       <p style={S.phase}>About you</p><p style={S.q}>What is your address and contact details?</p><p style={S.hint}>Used in the letter header.</p>
@@ -432,18 +587,18 @@ export default function App() {
         <Field value={data.senderEmail} onChange={v => set('senderEmail', v)} label="Email" ph="e.g. sarah@email.com" />
         <Field value={data.senderPhone} onChange={v => set('senderPhone', v)} label="Phone (optional)" ph="e.g. 0400 000 000" />
       </div>
-      <Nav step={step} total={TOTAL_STEPS} onBack={goBack} onNext={goNext} />
+      <Nav step={step} total={TOTAL_STEPS} onBack={goBack} onNext={goNext} onHome={goHome} />
     </div>,
     <div key={2}>
       <p style={S.phase}>The other party</p><p style={S.q}>Who are you writing to?</p><p style={S.hint}>Use the full legal name of the person or company.</p>
       <Field value={data.recipientName} onChange={v => set('recipientName', v)} label="Their full name or business name" ph="e.g. ABC Plumbing Pty Ltd" />
       <Field value={data.recipientAddress} onChange={v => set('recipientAddress', v)} label="Their address or email" ph="e.g. 50 Builder Lane Melbourne VIC 3000" />
-      <Nav step={step} total={TOTAL_STEPS} onBack={goBack} onNext={goNext} />
+      <Nav step={step} total={TOTAL_STEPS} onBack={goBack} onNext={goNext} onHome={goHome} />
     </div>,
     <div key={3}>
       <p style={S.phase}>The other party</p><p style={S.q}>Are they an individual or a business?</p>
       <Opts value={data.recipientType} onPick={v => pickOption('recipientType', v)} options={[{ v: 'individual', l: 'An individual person' }, { v: 'business', l: 'A business or company' }, { v: 'unsure', l: 'Not sure' }]} />
-      <Nav step={step} total={TOTAL_STEPS} onBack={goBack} onNext={goNext} />
+      <Nav step={step} total={TOTAL_STEPS} onBack={goBack} onNext={goNext} onHome={goHome} />
     </div>,
     <div key={4}>
       <p style={S.phase}>The dispute</p><p style={S.q}>What is this dispute about?</p><p style={S.hint}>Choose the closest match.</p>
@@ -456,28 +611,28 @@ export default function App() {
         { v: 'rent', l: 'Unpaid rent or bond dispute' },
         { v: 'other', l: 'Something else' },
       ]} />
-      <Nav step={step} total={TOTAL_STEPS} onBack={goBack} onNext={goNext} />
+      <Nav step={step} total={TOTAL_STEPS} onBack={goBack} onNext={goNext} onHome={goHome} />
     </div>,
     <div key={5}>
       <p style={S.phase}>What happened</p><p style={S.q}>When did the agreement or relationship begin?</p><p style={S.hint}>An approximate month and year is fine.</p>
       <Field value={data.startDate} onChange={v => set('startDate', v)} label="Date or period" ph="e.g. March 2023 or about mid 2022" />
-      <Nav step={step} total={TOTAL_STEPS} onBack={goBack} onNext={goNext} />
+      <Nav step={step} total={TOTAL_STEPS} onBack={goBack} onNext={goNext} onHome={goHome} />
     </div>,
     <div key={6}>
       <p style={S.phase}>What happened</p><p style={S.q}>What was agreed between you?</p><p style={S.hint}>Describe what they were supposed to do, pay or provide. Be as specific as you can including any amounts, timeframes or key terms.</p>
       <TA value={data.agreement} onChange={v => set('agreement', v)} ph="e.g. They agreed to renovate my kitchen for $15,000 and complete the work by June 2023." />
-      <Nav step={step} total={TOTAL_STEPS} onBack={goBack} onNext={goNext} />
+      <Nav step={step} total={TOTAL_STEPS} onBack={goBack} onNext={goNext} onHome={goHome} />
     </div>,
     <div key={7}>
       <p style={S.phase}>What happened</p><p style={S.q}>What went wrong?</p><p style={S.hint}>Describe what they did or failed to do. Include dates where you can.</p>
       <TA value={data.whatWentWrong} onChange={v => set('whatWentWrong', v)} ph="e.g. The contractor stopped attending site in July 2023 and has not returned calls or emails since." />
-      <Nav step={step} total={TOTAL_STEPS} onBack={goBack} onNext={goNext} />
+      <Nav step={step} total={TOTAL_STEPS} onBack={goBack} onNext={goNext} onHome={goHome} />
     </div>,
     <div key={8}>
       <p style={S.phase}>What happened</p><p style={S.q}>Have you already raised this with them?</p>
       <YN value={data.priorContact} onChange={v => set('priorContact', v)} yl="Yes I have contacted them" nl="No this is first contact" />
       {data.priorContact === 'yes' && <TA value={data.priorContactDetail} onChange={v => set('priorContactDetail', v)} label="What happened when you raised it?" ph="e.g. I emailed them on 1 August 2023. They promised to fix it but nothing has happened since." />}
-      <Nav step={step} total={TOTAL_STEPS} onBack={goBack} onNext={goNext} />
+      <Nav step={step} total={TOTAL_STEPS} onBack={goBack} onNext={goNext} onHome={goHome} />
     </div>,
     <div key={9}>
       <p style={S.phase}>What you want</p><p style={S.q}>What outcome are you seeking?</p>
@@ -486,7 +641,7 @@ export default function App() {
         { v: 'action', l: 'I want them to fix replace or do something' },
         { v: 'both', l: 'Both money and action' },
       ]} />
-      <Nav step={step} total={TOTAL_STEPS} onBack={goBack} onNext={goNext} />
+      <Nav step={step} total={TOTAL_STEPS} onBack={goBack} onNext={goNext} onHome={goHome} />
     </div>,
     <div key={10}>
       <p style={S.phase}>What you want</p><p style={S.q}>Details of your demand</p>
@@ -498,7 +653,7 @@ export default function App() {
         <TA value={data.actionDemand} onChange={v => set('actionDemand', v)} label="What specifically do you want them to do?" ph="e.g. Return and complete the kitchen renovation to the agreed standard." />
       )}
       <YN value={data.hasEvidence} onChange={v => set('hasEvidence', v)} label="Do you have supporting documents such as receipts invoices or quotes?" yl="Yes" nl="No" />
-      <Nav step={step} total={TOTAL_STEPS} onBack={goBack} onNext={goNext} />
+      <Nav step={step} total={TOTAL_STEPS} onBack={goBack} onNext={goNext} onHome={goHome} />
     </div>,
     <div key={11}>
       <p style={S.phase}>The deadline</p><p style={S.q}>How many days are you giving them to respond?</p><p style={S.hint}>14 days is standard for most disputes.</p>
@@ -508,7 +663,7 @@ export default function App() {
         { v: '21', l: '21 days' },
         { v: '28', l: '28 days' },
       ]} />
-      <Nav step={step} total={TOTAL_STEPS} onBack={goBack} onNext={goNext} />
+      <Nav step={step} total={TOTAL_STEPS} onBack={goBack} onNext={goNext} onHome={goHome} />
     </div>,
     <div key={12}>
       <p style={S.phase}>The deadline</p><p style={S.q}>If they ignore this letter what will you do?</p><p style={S.hint}>Be honest as this makes the letter more credible.</p>
@@ -518,12 +673,12 @@ export default function App() {
         { v: 'regulator', l: 'Complain to a regulator or ombudsman' },
         { v: 'unsure', l: 'Consider all available options' },
       ]} />
-      <Nav step={step} total={TOTAL_STEPS} onBack={goBack} onNext={goNext} />
+      <Nav step={step} total={TOTAL_STEPS} onBack={goBack} onNext={goNext} onHome={goHome} />
     </div>,
     <div key={13}>
       <p style={S.phase}>Payment details</p>
       <p style={S.q}>How should payment be made to you?</p>
-      <p style={S.hint}>{needsPayment ? 'Providing your bank details makes it easier for them to comply immediately.' : 'As you are not claiming money you can skip this step and generate your letter.'}</p>
+      <p style={S.hint}>{needsPayment ? 'Providing your bank details makes it easier for them to comply immediately.' : 'As you are not claiming money you can skip this step and click Review answers.'}</p>
       {needsPayment && <>
         <Field value={data.bankName} onChange={v => set('bankName', v)} label="Bank name" ph="e.g. Commonwealth Bank" />
         <div style={S.g2}>
@@ -532,7 +687,7 @@ export default function App() {
         </div>
         <Field value={data.accountName} onChange={v => set('accountName', v)} label="Account name" ph="e.g. Sarah Johnson" />
       </>}
-      <Nav step={step} total={TOTAL_STEPS} onBack={goBack} onNext={goNext} />
+      <Nav step={step} total={TOTAL_STEPS} onBack={goBack} onNext={goNext} onHome={goHome} />
     </div>,
   ]
 
