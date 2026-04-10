@@ -590,6 +590,17 @@ export default function App() {
                 <button className="btn-secondary" style={S.copyBtn} onClick={async () => { await navigator.clipboard.writeText(letter); setCopied(true); setTimeout(() => setCopied(false), 2500) }}>
                   {copied ? 'Copied!' : 'Copy letter text'}
                 </button>
+                <button className="btn-secondary" style={S.copyBtn} onClick={() => {
+                  const blob = new Blob([letter], { type: 'text/plain' })
+                  const url = URL.createObjectURL(blob)
+                  const a = document.createElement('a')
+                  a.href = url
+                  a.download = 'letter-of-demand.txt'
+                  a.click()
+                  URL.revokeObjectURL(url)
+                }}>
+                  Download letter
+                </button>
                 <button className="btn-secondary" style={S.copyBtn} onClick={() => { setScreen('review') }}>Back to answers</button>
                 <button className="btn-secondary" style={S.restartBtn} onClick={restart}>Start over</button>
               </div>
