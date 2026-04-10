@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'Letter of Demand Builder',
+  title: 'Letter of Demand',
   description: 'Generate a formal letter of demand in minutes',
 }
 
