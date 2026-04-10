@@ -1,4 +1,4 @@
-import Builder from '@/components/Builder'
+import App from '@/components/App'
 
 export default function Home() {
   return <Builder />
